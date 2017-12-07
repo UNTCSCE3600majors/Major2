@@ -1,4 +1,8 @@
 # Major2
-Currently the server has some notes I've picked up in class.
+Names: 
+Dan Shadel
+Logan Falkensten
+Eli Cruse
+Jared Westmoreland
 
-I've uploaded both of the files from blackboard so you shouldn't need to connect to blackboard unless your looking at lecture notes
+Organization: The project was organized into pairs, with two people handling the server, and two people handling the client. Dan and Jared handled the client side, and Logan and Eli the server side. 
