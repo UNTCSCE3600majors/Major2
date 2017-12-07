@@ -7,184 +7,191 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
+#include <arpa/inet.h>
 #include <pthread.h>
 
-int sockfd = 0, n = 0;//socket
-char recvBuff[1024];//buffer 
+int sock = 0, number = 0;//socket
+char Buff[1024];//buffer
 struct sockaddr_in serv_addr;
-int curr_total = 0;//total count 
-char * ip_client; //ip 
+int total_amount = 0;//total count
+char * ip_cl; //ip
+pthread_mutex_t mLock;
 
-
-void *client_function(void *arg){
+void *client(void *arg){
 
     while(1){
-
-        
-        n = read(sockfd, recvBuff, sizeof(recvBuff)-1);//reads from socket
-        
-        recvBuff[n] = 0;
-            
-        printf( "\nValue Received from Server\n");
-        int port_number;//port number
-            if(strstr(recvBuff,"PORT")!=NULL){
+		
+		bzero(Buff,1024);
+        number = read(sock, Buff, sizeof(Buff)-1);//reads from socket
+        if(number < 0)
+		{
+			printf ("READ FAILED\n");
+		}
+		
+        printf( "The new total for this client is %d\n",atoi(Buff));
+		
+        int port_info;//port number
+            if(strstr(Buff,"PORT")!=NULL){
                     sleep(2);
                     printf( "\nConnecting with Other Client\n");
-                    char Message_string[1024];//buffer string for messages
-                    strcpy(Message_string,recvBuff);//copies message into message string
-                    char delim[] = " ";//delimeter assignments 
-                    char * pch= strtok(recvBuff,delim);//string conversion
-                    pch = strtok(NULL,delim);//port channel assignment
+                    char data_message[1024];//buffer string for messages
+                    strcpy(data_message,Buff);//copies message into message string
+                    char dlim[] = " ";//delimeter assignments
+                    char * port_string= strtok(Buff,dlim);//string conversion
+                    port_string = strtok(NULL,dlim);//port channel assignment
 
-                    port_number = atoi(pch);//ascii to int port number
+                    port_info = atoi(port_string);//ascii to int port number
 
-                    close(sockfd);//closes socket feed
+                    close(sock);//closes socket feed
 
-                    int sockfd1 = 0; //new socket open
-                    char recvBuff1[1024];//recieves message in this buffer
+                    int sock1 = 0; //new socket open
+                    char Buff1[1024];//recieves message in this buffer
                     struct sockaddr_in serv_addr1;
 
-                    memset(recvBuff1, '0',sizeof(recvBuff1));//sets 0 in buffer
+                    memset(Buff1, '0',sizeof(Buff1));//sets 0 in buffer
 
-                    if((sockfd1 = socket(AF_INET, SOCK_STREAM, 0)) < 0)//error checking condition 
+                    if((sock1 = socket(AF_INET, SOCK_STREAM, 0)) < 0)//error checking condition
                     {
                         printf("\n Error : Could not create socket \n");
-                        return 1;
-                    } 
+                        return 0;
+                    }
 
                     memset(&serv_addr1, '0', sizeof(serv_addr1)); //sets 0
 
                     serv_addr1.sin_family = AF_INET;//sets type
-                    serv_addr1.sin_port = htons(port_number); //big endian to little endian
+                    serv_addr1.sin_port = htons(port_info); //big endian to little endian
 
-                    if(inet_pton(AF_INET, ip_client, &serv_addr1.sin_addr)<=0)//error checking condition
+                    if(inet_pton(AF_INET, ip_cl, &serv_addr1.sin_addr)<=0)//error checking condition
                     {
                         printf("\n inet_pton error occured\n");
-                        return 1;
-                    } 
+                        return 0;
+                    }
 
-                    if( connect(sockfd1, (struct sockaddr *)&serv_addr1, sizeof(serv_addr1)) < 0)//error checking condition
+                    if( connect(sock1, (struct sockaddr *)&serv_addr1, sizeof(serv_addr1)) < 0)//error checking condition
                     {
                        printf("\n Error : Connect Failed \n");
-                       return 1;
-                    } 
+                       return 0;
+                    }
 
-                    char sendBuff[1024];//sending buffer to server
+                    char transBuff[1024];//sending buffer to server
 
-                    sprintf(sendBuff, "%i",curr_total);
-                    write(sockfd1, sendBuff, strlen(sendBuff));//sends to server
-                    close(sockfd1);//closes socket connection
+                    sprintf(transBuff, "%i",total_amount);
+                    write(sock1, transBuff, strlen(transBuff));//sends to server
+                    close(sock1);//closes socket connection
 
-                    printf("\n Finishing myself. \n");
+                    printf("\n Sending socket and disconnecting \n");
                     exit(0);
 
 
 
                 } else {
-                    curr_total = atoi(recvBuff);
+                    total_amount = atoi(Buff);
 
-                    if (curr_total > 1023 && curr_total < 49152){// threshold condition required in question
+                    if (total_amount > 1023 && total_amount < 49152){// threshold condition required in question
                         printf( "\nStarting Own Server");
 
-                        int listenfd = 0, connfd = 0;// listening variables.
-                        struct sockaddr_in serv_addr2; 
+                        int listen_to = 0, connect_to = 0;// listening variables.
+                        struct sockaddr_in serv_addr2;
 
-                        char recvBuff2[1025]; //recieves in this buffer
+                        char Buff2[1025]; //recieves in this buffer
 
-                        listenfd = socket(AF_INET, SOCK_STREAM, 0);//listen function
-                        memset(&serv_addr2, '0', sizeof(serv_addr2));//sets 0 
-                        memset(recvBuff2, '0', sizeof(recvBuff2)); //sets 0
+                        listen_to = socket(AF_INET, SOCK_STREAM, 0);//listen function
+                        memset(&serv_addr2, '0', sizeof(serv_addr2));//sets 0
+                        memset(Buff2, '0', sizeof(Buff2)); //sets 0
 
                         serv_addr2.sin_family = AF_INET;
                         serv_addr2.sin_addr.s_addr = htonl(INADDR_ANY);
-                        serv_addr2.sin_port = htons(curr_total); 
+                        serv_addr2.sin_port = htons(total_amount);
 
-                        bind(listenfd, (struct sockaddr*)&serv_addr2, sizeof(serv_addr2)); //binding function
+                        bind(listen_to, (struct sockaddr*)&serv_addr2, sizeof(serv_addr2)); //binding function
 
-                        listen(listenfd, 10); //listens
+                        listen(listen_to, 10); //listens
 
-                        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);//accepts connections
+                        connect_to = accept(listen_to, (struct sockaddr*)NULL, NULL);//accepts connections
 
-                       read(connfd, recvBuff2, sizeof(recvBuff2)-1);//reads from server
-                            recvBuff2[n] = 0;
-                            
+                       read(connect_to, Buff2, sizeof(Buff2)-1);//reads from server
+                            Buff2[number] = 0;
+
                         printf("\nReceived Value from other Client \n");
 
                     }
-
-
-
                 }
         }
-	
 }
 
 int main(int argc, char *argv[])// main
 {
-     
+	int update;
 
-    if(argc != 4) //tells the connected client 
+    if(argc != 4) //tells the connected client
     {
         printf("\n Usage: %s <ip of server> <port> <ip of other client>\n",argv[0]);
-        return 1;
-    } 
-    ip_client = argv[3];
-    memset(recvBuff, '0',sizeof(recvBuff));//sets 0
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)//makes connection with other client 
+        return 0;
+    }
+/*	update = pthread_mutex_init(&mLock, NULL);
+	if(update != 0)
+	{
+		printf("Error: %s\n", strerror(update));
+	}
+*/	
+    ip_cl = argv[3];
+    memset(Buff, '0',sizeof(Buff));//sets 0
+    if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)//makes connection with other client
     {
         printf("\n Error : Could not create socket \n");
-        return 1;
-    } 
+        return 0;
+    }
 
     memset(&serv_addr, '0', sizeof(serv_addr)); //sets 0
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(atoi(argv[2])); 
+    serv_addr.sin_port = htons(atoi(argv[2]));
 
-    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)//error checking 
+    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)//error checking
     {
         printf("\n inet_pton error occured\n");
-        return 1;
-    } 
+        return 0;
+    }
 
-    if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)//error checking
+    if( connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)//error checking
     {
        printf("\n Error : Connect Failed \n");
-       return 1;
-    } 
+       return 0;
+    }
 
     pthread_t client_thread;
-         
-    if( pthread_create( &client_thread , NULL ,  client_function , (void*) 1) < 0)//error checking 
+
+    if( pthread_create( &client_thread , NULL ,  client , (void*) 1) < 0)//error checking
     {
         perror("could not create thread");
-        return 1; 
+        return 0;
     }
 
-    
-
+	
+//	pthread_mutex_lock(&mLock);
     while (1){ //sends value from user input in this loop
-        
-        int val = 0;
-        printf( "\nEnter a value :");
-        scanf("%i", &val);
-        if (val == 0 ){
-             close(sockfd);
+        int stuff = 0;
+		printf( "\nEnter a value :");
+        scanf("%i", &stuff);
+        if (stuff == 0 ){
+             close(sock);
             exit(0);
-            
         } else {
-           char sendBuff[1024];
-            sprintf(sendBuff, "%i",val);
-            int n = write(sockfd, sendBuff, strlen(sendBuff));
-           
+           char transBuff[1024];
+            sprintf(transBuff, "%i",stuff);
+            int number = write(sock, transBuff, strlen(transBuff));
+
         }
     }
+//	pthread_mutex_unlock(&mLock);
+	
     pthread_join(client_thread, NULL);// creates thread
-
-     
-
-    
-
+	
+/*	update = pthread_mutex_destroy(&mLock);
+	if(update != 0)
+	{
+		printf("Error: %s\n", strerror(update));
+	}
+*/	
     return 0;
 }
